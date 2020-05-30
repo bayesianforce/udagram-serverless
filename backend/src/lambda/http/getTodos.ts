@@ -4,6 +4,7 @@ import { cors } from 'middy/middlewares'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { getTodos } from '../../businessLogic/todos'
 import { createLogger } from '../../utils/logger'
+import { handleError } from '../utils'
 
 const logger = createLogger('Todo Get All request')
 
@@ -15,11 +16,15 @@ export const handler = middy(
     const split = authorization.split(' ')
     const jwtToken = split[1]
 
-    const todos = await getTodos(jwtToken)
+    try {
+      const items = await getTodos(jwtToken)
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ todos })
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ items })
+      }
+    } catch (e) {
+      return handleError(e)
     }
   }
 )

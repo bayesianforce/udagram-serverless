@@ -11,8 +11,6 @@ export function todoAccessCreator() {
   const todoTable = process.env.TODO_TABLE
   const userIdIndex = process.env.USER_ID_INDEX
   const bucketName = process.env.IMAGES_S3_BUCKET
-  const urlExpiration = process.env.SIGNED_URL_EXPIRATION
-  const s3 = new AWS.S3({ signatureVersion: 'v4' })
 
   async function getTodoById(todoId: string): Promise<TodoItem> {
     logger.info('getTodoById', { todoId })
@@ -97,21 +95,13 @@ export function todoAccessCreator() {
     await docClient.delete(params).promise()
   }
 
-  async function generateUploadUrl(
+  async function storeUploadUrl(
     imageId: string,
     todoId: string
-  ): Promise<string> {
+  ): Promise<void> {
     logger.info('generateUploadUrl', ` ${imageId} ${todoId}`)
 
     const item = await getTodoById(todoId)
-
-    const params0 = {
-      Bucket: bucketName,
-      Key: imageId,
-      Expires: urlExpiration
-    }
-
-    const url = await s3.getSignedUrl('putObject', params0)
 
     const params1 = {
       TableName: todoTable,
@@ -123,8 +113,6 @@ export function todoAccessCreator() {
     }
 
     await docClient.update(params1).promise()
-
-    return url
   }
 
   return {
@@ -132,6 +120,6 @@ export function todoAccessCreator() {
     createTodo,
     updateTodo,
     deleteTodo,
-    generateUploadUrl
+    storeUploadUrl
   }
 }

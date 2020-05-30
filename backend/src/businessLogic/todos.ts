@@ -1,29 +1,29 @@
 import * as uuid from 'uuid'
 import { todoAccessCreator } from '../dataLayer/todoAccess'
 import { TodoItem } from '../models/TodoItem'
-import { createLogger } from '../utils/logger'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { TodoUpdate } from '../models/TodoUpdate'
-
-const logger = createLogger('Todo BusinessLogic')
+import { parseUserId } from '../auth/utils'
+import { storageAccessCreator } from '../dataLayer/storageAccess'
 
 const TodoAccess = todoAccessCreator()
+const StorageAccess = storageAccessCreator()
 
 export async function getTodos(jwtToken: string): Promise<TodoItem[]> {
-  logger.info('getAllTodos', jwtToken)
-  const userId = '1'
+  const userId = parseUserId(jwtToken)
 
   return TodoAccess.getTodos(userId)
 }
 
-export async function createTodo(todo: CreateTodoRequest): Promise<TodoItem> {
-  logger.info('createTodo')
-
+export async function createTodo(
+  todo: CreateTodoRequest,
+  jwtToken: string
+): Promise<TodoItem> {
   const todoId = uuid.v4()
+  const userId = parseUserId(jwtToken)
   const createdAt = new Date().toISOString()
-
   const newItem = {
-    userId: '1',
+    userId,
     todoId,
     createdAt,
     ...todo
@@ -36,21 +36,18 @@ export async function updateTodo(
   todoId: string,
   todo: TodoUpdate
 ): Promise<void> {
-  logger.info('updateTodo', `${todoId} - ${todo}`)
-
   return TodoAccess.updateTodo(todoId, todo)
 }
 
 export async function deleteTodo(todoId: string): Promise<void> {
-  logger.info('deleteTodo', todoId)
-
   return TodoAccess.deleteTodo(todoId)
 }
 
 export async function generateUploadUrl(todoId: string): Promise<string> {
-  logger.info('generateUploadUrl', todoId)
-
   const imageId = uuid.v4()
+  const url = await StorageAccess.getUploadUrl(imageId)
 
-  return TodoAccess.generateUploadUrl(imageId, todoId)
+  TodoAccess.storeUploadUrl(imageId, todoId)
+
+  return url
 }

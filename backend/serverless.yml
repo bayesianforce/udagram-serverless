@@ -37,7 +37,7 @@ provider:
 
 functions:
   Auth:
-    handler: src/lambda/auth/auth0Authorizer.handler
+    handler: src/lambda/auth/rs256Auth0Authorizer.handler
 
   GetTodos:
     handler: src/lambda/http/getTodos.handler
