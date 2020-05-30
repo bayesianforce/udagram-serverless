@@ -22,7 +22,7 @@ export const handler = middy(
         body: ''
       }
     } catch (e) {
-      handleError(e)
+      return handleError(e)
     }
   }
 )

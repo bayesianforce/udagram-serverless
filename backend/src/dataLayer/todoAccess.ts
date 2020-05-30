@@ -11,17 +11,19 @@ export function todoAccessCreator() {
   const todoTable = process.env.TODO_TABLE
   const userIdIndex = process.env.USER_ID_INDEX
   const bucketName = process.env.IMAGES_S3_BUCKET
+  const urlExpiration = process.env.SIGNED_URL_EXPIRATION
+  const s3 = new AWS.S3({ signatureVersion: 'v4' })
 
   async function getTodoById(todoId: string): Promise<TodoItem> {
     logger.info('getTodoById', { todoId })
 
-    const result = await docClient
-      .query({
-        TableName: todoTable,
-        KeyConditionExpression: 'todoId = :todoId',
-        ExpressionAttributeValues: { ':todoId': todoId }
-      })
-      .promise()
+    const params = {
+      TableName: todoTable,
+      KeyConditionExpression: 'todoId = :todoId',
+      ExpressionAttributeValues: { ':todoId': todoId }
+    }
+
+    const result = await docClient.query(params).promise()
 
     if (result.Items.length < 1) {
       throw {
@@ -36,16 +38,16 @@ export function todoAccessCreator() {
   async function getTodos(userId: string): Promise<TodoItem[]> {
     logger.info('getAllTodos', userId)
 
-    const result = await docClient
-      .query({
-        TableName: todoTable,
-        IndexName: userIdIndex,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId
-        }
-      })
-      .promise()
+    const params = {
+      TableName: todoTable,
+      IndexName: userIdIndex,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      }
+    }
+
+    const result = await docClient.query(params).promise()
 
     return result.Items as TodoItem[]
   }
@@ -53,12 +55,12 @@ export function todoAccessCreator() {
   async function createTodo(todo: CreateTodoRequest): Promise<TodoItem> {
     logger.info('createTodo', todo)
 
-    await docClient
-      .put({
-        TableName: todoTable,
-        Item: todo
-      })
-      .promise()
+    const params = {
+      TableName: todoTable,
+      Item: todo
+    }
+
+    await docClient.put(params).promise()
 
     return todo as TodoItem
   }
@@ -68,19 +70,18 @@ export function todoAccessCreator() {
 
     const item = await getTodoById(todoId)
 
-    await this.docClient
-      .update({
-        TableName: this.todoTable,
-        Key: { todoId, createdAt: item.createdAt },
-        UpdateExpression: 'set #N=:name, dueDate=:dueDate, done=:done',
-        ExpressionAttributeNames: { '#N': 'name' },
-        ExpressionAttributeValues: {
-          ':name': todo.name,
-          ':dueDate': todo.dueDate,
-          ':done': todo.done
-        }
-      })
-      .promise()
+    const params = {
+      TableName: todoTable,
+      Key: { todoId, createdAt: item.createdAt },
+      UpdateExpression: 'set #N=:name, dueDate=:dueDate, done=:done',
+      ExpressionAttributeNames: { '#N': 'name' },
+      ExpressionAttributeValues: {
+        ':name': todo.name,
+        ':dueDate': todo.dueDate,
+        ':done': todo.done
+      }
+    }
+    await docClient.update(params).promise()
   }
 
   async function deleteTodo(todoId: string) {
@@ -88,29 +89,42 @@ export function todoAccessCreator() {
 
     const item = await getTodoById(todoId)
 
-    await docClient
-      .delete({
-        TableName: todoTable,
-        Key: { todoId, createdAt: item.createdAt }
-      })
-      .promise()
+    const params = {
+      TableName: todoTable,
+      Key: { todoId, createdAt: item.createdAt }
+    }
+
+    await docClient.delete(params).promise()
   }
 
-  const createImage = async function (imageId: string, todoId: string) {
-    logger.info('createImage', ` ${imageId} ${todoId}`)
+  async function generateUploadUrl(
+    imageId: string,
+    todoId: string
+  ): Promise<string> {
+    logger.info('generateUploadUrl', ` ${imageId} ${todoId}`)
 
     const item = await getTodoById(todoId)
 
-    return docClient
-      .update({
-        TableName: todoTable,
-        Key: { todoId, createdAt: item.createdAt },
-        UpdateExpression: 'set attachmentUrl=:attachmentUrl',
-        ExpressionAttributeValues: {
-          ':attachmentUrl': `https://${bucketName}.s3.amazonaws.com/${imageId}`
-        }
-      })
-      .promise()
+    const params0 = {
+      Bucket: bucketName,
+      Key: imageId,
+      Expires: urlExpiration
+    }
+
+    const url = await s3.getSignedUrl('putObject', params0)
+
+    const params1 = {
+      TableName: todoTable,
+      Key: { todoId, createdAt: item.createdAt },
+      UpdateExpression: 'set attachmentUrl=:attachmentUrl',
+      ExpressionAttributeValues: {
+        ':attachmentUrl': `https://${bucketName}.s3.amazonaws.com/${imageId}`
+      }
+    }
+
+    await docClient.update(params1).promise()
+
+    return url
   }
 
   return {
@@ -118,6 +132,6 @@ export function todoAccessCreator() {
     createTodo,
     updateTodo,
     deleteTodo,
-    createImage
+    generateUploadUrl
   }
 }

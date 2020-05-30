@@ -4,6 +4,7 @@ import { cors } from 'middy/middlewares'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { createLogger } from '../../utils/logger'
 import { generateUploadUrl } from '../../businessLogic/todos'
+import { handleError } from '../utils'
 
 const logger = createLogger('Todo Delete request')
 
@@ -13,11 +14,15 @@ export const handler = middy(
 
     const todoId = event.pathParameters.todoId
 
-    const url = await generateUploadUrl(todoId)
+    try {
+      const uploadUrl = await generateUploadUrl(todoId)
 
-    return {
-      statusCode: 201,
-      body: JSON.stringify({ url })
+      return {
+        statusCode: 201,
+        body: JSON.stringify({ uploadUrl })
+      }
+    } catch (e) {
+      return handleError(e)
     }
   }
 )

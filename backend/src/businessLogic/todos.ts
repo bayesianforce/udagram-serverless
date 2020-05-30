@@ -1,6 +1,5 @@
 import * as uuid from 'uuid'
 import { todoAccessCreator } from '../dataLayer/todoAccess'
-import { getUploadUrl } from '../dataLayer/S3'
 import { TodoItem } from '../models/TodoItem'
 import { createLogger } from '../utils/logger'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
@@ -52,9 +51,6 @@ export async function generateUploadUrl(todoId: string): Promise<string> {
   logger.info('generateUploadUrl', todoId)
 
   const imageId = uuid.v4()
-  const url = getUploadUrl(imageId)
 
-  await TodoAccess.createImage(imageId, todoId)
-
-  return url
+  return TodoAccess.generateUploadUrl(imageId, todoId)
 }

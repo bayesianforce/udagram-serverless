@@ -22,8 +22,15 @@ export function getUserId(event: APIGatewayProxyEvent): string {
 export function handleError(error: CustomError): APIGatewayProxyResult {
   logger.info('handleError', error)
 
-  return {
-    statusCode: error.statusCode,
-    body: JSON.stringify({ message: error.message })
+  if (error.statusCode && error.message) {
+    return {
+      statusCode: error.statusCode,
+      body: JSON.stringify({ message: error.message })
+    }
+  } else {
+    return {
+      statusCode: 500,
+      body: JSON.stringify(error)
+    }
   }
 }
