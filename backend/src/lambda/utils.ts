@@ -1,5 +1,9 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
-import { parseUserId } from "../auth/utils";
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { parseUserId } from '../auth/utils'
+import { createLogger } from '../utils/logger'
+import { CustomError } from '../models/CustomError'
+
+const logger = createLogger('Helper')
 
 /**
  * Get a user id from an API Gateway event
@@ -13,4 +17,13 @@ export function getUserId(event: APIGatewayProxyEvent): string {
   const jwtToken = split[1]
 
   return parseUserId(jwtToken)
+}
+
+export function handleError(error: CustomError): APIGatewayProxyResult {
+  logger.info('handleError', error)
+
+  return {
+    statusCode: error.statusCode,
+    body: JSON.stringify({ message: error.message })
+  }
 }
