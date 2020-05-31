@@ -191,7 +191,7 @@ TodosTable:
       - AttributeName: sortKey
         KeyType: RANGE
     BillingMode: PAY_PER_REQUEST
-    TableName: ${self:provider.environment.TODOS_TABLE}
+    TableName: ${self:provider.environment.TODO_TABLE}
     LocalSecondaryIndexes:
       - IndexName: ${self:provider.environment.INDEX_NAME}
         KeySchema:
