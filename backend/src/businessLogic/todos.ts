@@ -26,6 +26,7 @@ export async function createTodo(
     userId,
     todoId,
     createdAt,
+    done: false,
     ...todo
   }
 
